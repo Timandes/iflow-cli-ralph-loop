@@ -9,6 +9,7 @@ iFlow CLI Ralph Loop - 迭代式提示词处理工具
 import sys
 import asyncio
 import argparse
+import time
 from iflow_sdk import IFlowClient, IFlowOptions
 
 
@@ -54,8 +55,15 @@ async def main():
     print(f"完成关键词：{completion_promise}", file=sys.stderr)
     print("-" * 50, file=sys.stderr)
     
+    # 统计信息
+    actual_iterations = 0
+    iteration_stats = []
+    
     # 迭代处理
     for iteration in range(1, max_iterations + 1):
+        actual_iterations = iteration
+        iteration_start_time = time.time()
+        message_count = 0
         print(f"\n[迭代 {iteration}/{max_iterations}]", file=sys.stderr)
         print(f"发送prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}", file=sys.stderr)
         
@@ -81,6 +89,8 @@ async def main():
         response_text = ""
         try:
             async for message in client.receive_messages():
+                message_count += 1
+                
                 # 检查是否是TaskFinishMessage（任务完成）
                 from iflow_sdk.types import TaskFinishMessage
                 if isinstance(message, TaskFinishMessage):
@@ -112,6 +122,17 @@ async def main():
                     print(f"\n检测到完成关键词：{completion_promise}", file=sys.stderr)
                     print(completion_promise)
                     await client.disconnect()
+                    
+                    # 记录本轮统计信息
+                    iteration_end_time = time.time()
+                    iteration_stats.append({
+                        'iteration': iteration,
+                        'duration': iteration_end_time - iteration_start_time,
+                        'message_count': message_count
+                    })
+                    
+                    # 输出统计信息
+                    print_statistics(max_iterations, actual_iterations, iteration_stats)
                     return
         except Exception as e:
             print(f"错误：接收消息失败: {e}", file=sys.stderr)
@@ -121,13 +142,50 @@ async def main():
         # 断开连接
         await client.disconnect()
         
+        # 记录本轮统计信息
+        iteration_end_time = time.time()
+        iteration_stats.append({
+            'iteration': iteration,
+            'duration': iteration_end_time - iteration_start_time,
+            'message_count': message_count
+        })
+        
         # 将响应作为下一轮的prompt继续迭代
         prompt = response_text
     
     # 达到最大迭代次数
     print(f"\n达到最大迭代次数：{max_iterations}", file=sys.stderr)
     print(completion_promise)
-    await client.disconnect()
+    
+    # 输出统计信息
+    print_statistics(max_iterations, actual_iterations, iteration_stats)
+
+
+def print_statistics(max_iterations, actual_iterations, iteration_stats):
+    """输出执行统计信息"""
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("执行统计信息", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    print(f"预期迭代次数: {max_iterations}", file=sys.stderr)
+    print(f"实际迭代次数: {actual_iterations}", file=sys.stderr)
+    print(f"完成原因: {'检测到完成关键词' if actual_iterations < max_iterations else '达到最大迭代次数'}", file=sys.stderr)
+    print("\n各轮迭代详情:", file=sys.stderr)
+    print("-" * 60, file=sys.stderr)
+    print(f"{'轮次':<6} {'耗时(秒)':<12} {'消息数':<10}", file=sys.stderr)
+    print("-" * 60, file=sys.stderr)
+    
+    total_duration = 0
+    total_messages = 0
+    
+    for stat in iteration_stats:
+        total_duration += stat['duration']
+        total_messages += stat['message_count']
+        print(f"{stat['iteration']:<6} {stat['duration']:<12.3f} {stat['message_count']:<10}", file=sys.stderr)
+    
+    print("-" * 60, file=sys.stderr)
+    print(f"{'总计':<6} {total_duration:<12.3f} {total_messages:<10}", file=sys.stderr)
+    print(f"{'平均':<6} {total_duration/len(iteration_stats):<12.3f} {total_messages/len(iteration_stats):<10.1f}", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
 
 
 if __name__ == "__main__":
