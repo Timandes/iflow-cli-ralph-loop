@@ -49,26 +49,16 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Determine IFLOW_CLI_VERSION
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.iflow_cli_version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=0.5.1" >> $GITHUB_OUTPUT
-          fi
+            type=raw,value=${{ github.event.inputs.iflow_cli_version || '0.5.1' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ steps.meta.outputs.tags }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            IFLOW_CLI_VERSION=${{ steps.version.outputs.version }}
+            IFLOW_CLI_VERSION=${{ github.event.inputs.iflow_cli_version || '0.5.1' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
