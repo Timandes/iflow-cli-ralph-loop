@@ -46,7 +46,6 @@ async def main():
     
     # 初始化iflow客户端，使用YOLO模式
     options = IFlowOptions()
-    client = IFlowClient(options=options)
     
     max_iterations = args.max_iterations
     completion_promise = args.completion_promise
@@ -55,17 +54,20 @@ async def main():
     print(f"完成关键词：{completion_promise}", file=sys.stderr)
     print("-" * 50, file=sys.stderr)
     
-    # 连接到iflow
-    try:
-        await client.connect()
-    except Exception as e:
-        print(f"错误：连接iflow失败: {e}", file=sys.stderr)
-        sys.exit(1)
-    
     # 迭代处理
     for iteration in range(1, max_iterations + 1):
         print(f"\n[迭代 {iteration}/{max_iterations}]", file=sys.stderr)
         print(f"发送prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}", file=sys.stderr)
+        
+        # 每轮迭代创建新的客户端并连接
+        client = IFlowClient(options=options)
+        
+        # 连接到iflow
+        try:
+            await client.connect()
+        except Exception as e:
+            print(f"错误：连接iflow失败: {e}", file=sys.stderr)
+            sys.exit(1)
         
         # 发送消息
         try:
@@ -115,6 +117,9 @@ async def main():
             print(f"错误：接收消息失败: {e}", file=sys.stderr)
             await client.disconnect()
             sys.exit(1)
+        
+        # 断开连接
+        await client.disconnect()
         
         # 将响应作为下一轮的prompt继续迭代
         prompt = response_text
