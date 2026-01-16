@@ -15,7 +15,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/${{ github.event.repository.name }}
-  IMAGE_NAME_LOWER: ${{ tolower(env.IMAGE_NAME) }}
 
 jobs:
   build:
@@ -42,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}
+          images: ${{ env.REGISTRY }}/${{ tolower(env.IMAGE_NAME) }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -67,7 +66,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ tolower(env.IMAGE_NAME) }}:${{ steps.version.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             IFLOW_CLI_VERSION=${{ steps.version.outputs.version }}
