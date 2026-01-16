@@ -79,6 +79,13 @@ async def main():
         response_text = ""
         try:
             async for message in client.receive_messages():
+                # 检查是否是TaskFinishMessage（任务完成）
+                from iflow_sdk.types import TaskFinishMessage
+                if isinstance(message, TaskFinishMessage):
+                    # 收到TaskFinishMessage，只停止本轮迭代
+                    print(f"\n检测到TaskFinishMessage: {message.stop_reason}", file=sys.stderr)
+                    break
+                
                 # 提取消息文本
                 msg_text = ""
                 if hasattr(message, 'content'):
@@ -96,20 +103,20 @@ async def main():
                 
                 # 输出消息内容
                 print(msg_text)
+                
+                # 检查是否包含完成关键词（自动添加<promise>标签）
+                promise_tag = f"<promise>{completion_promise}</promise>"
+                if promise_tag in response_text:
+                    print(f"\n检测到完成关键词：{completion_promise}", file=sys.stderr)
+                    print(completion_promise)
+                    await client.disconnect()
+                    return
         except Exception as e:
             print(f"错误：接收消息失败: {e}", file=sys.stderr)
             await client.disconnect()
             sys.exit(1)
         
-        # 检查是否包含完成关键词（自动添加<promise>标签）
-        promise_tag = f"<promise>{completion_promise}</promise>"
-        if promise_tag in response_text:
-            print(f"\n检测到完成关键词：{completion_promise}", file=sys.stderr)
-            print(completion_promise)
-            await client.disconnect()
-            return
-        
-        # 将响应作为下一轮的prompt
+        # 将响应作为下一轮的prompt继续迭代
         prompt = response_text
     
     # 达到最大迭代次数

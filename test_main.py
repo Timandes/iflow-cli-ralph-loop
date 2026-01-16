@@ -224,6 +224,48 @@ class TestMainFunction(unittest.TestCase):
             with self.assertRaises(SystemExit) as context:
                 asyncio.run(main.main())
             self.assertEqual(context.exception.code, 1)
+    
+    @patch('main.IFlowClient')
+    @patch('sys.stdin', StringIO("测试prompt"))
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_task_finish_message(self, mock_stderr, mock_stdout, mock_client_class):
+        """测试TaskFinishMessage只停止本轮迭代"""
+        mock_client = AsyncMock()
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client.send_message = AsyncMock()
+        
+        # Mock消息对象
+        msg1 = Mock()
+        msg1.content = "响应1"
+        
+        # 创建真正的TaskFinishMessage
+        from iflow_sdk.types import TaskFinishMessage, StopReason
+        task_finish = TaskFinishMessage(stop_reason=StopReason.END_TURN)
+        
+        async def mock_receive():
+            yield msg1
+            yield task_finish
+        
+        mock_client.receive_messages = Mock(return_value=mock_receive())
+        mock_client_class.return_value = mock_client
+        
+        # 导入并运行main
+        with patch('sys.argv', ['main.py', '--max-iterations', '3']):
+            import main
+            asyncio.run(main.main())
+        
+        # 验证调用了3次send_message（因为TaskFinishMessage只停止本轮，继续下一轮）
+        self.assertEqual(mock_client.send_message.call_count, 3)
+        
+        # 验证stdout输出包含响应内容
+        output = mock_stdout.getvalue()
+        self.assertIn("响应1", output)
+        
+        # 验证stderr输出包含达到最大迭代次数的消息
+        stderr_output = mock_stderr.getvalue()
+        self.assertIn("达到最大迭代次数：3", stderr_output)
 
 
 class TestArgumentParsing(unittest.TestCase):
