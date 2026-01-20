@@ -1,5 +1,7 @@
 # iFlow CLI Ralph Loop
 
+这个项目旨在通过IFlow CLI复现原始的Claude Code的插件[Ralph Loop](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-loop)的能力。
+
 ## 命令行参数
 
 - `--max-iterations`: 最大迭代次数（默认：10）
@@ -32,7 +34,27 @@ cat PROMPTS.txt | docker run --rm -i \
   uv run -m main
 ```
 
-### 使用参数示例
+## 使用示例
+
+1）进入工作目录
+
+```bash
+cd /path/to/work
+```
+
+2）创建PROMPTS.txt
+
+```bash
+echo 'xxxx' > PROMPTS.txt
+```
+
+注意追加完成提示词：
+
+```bash
+echo '结束时输出<promise>COMPLETE</promise>' >> PROMPTS.txt
+```
+
+3）开始工作
 
 ```bash
 cat PROMPTS.txt | docker run --rm -i \
@@ -40,7 +62,7 @@ cat PROMPTS.txt | docker run --rm -i \
   -e IFLOW_BASE_URL=https://apis.iflow.cn/v1 \
   -e IFLOW_MODEL_NAME=glm-4.7 \
   -e IFLOW_API_KEY=sk-xxxxxx \
-  -v /path/to/workdir:/workdir \
+  -v `pwd`:/workdir \
   ghcr.io/timandes/iflow-cli-ralph-loop:0.5.1 \
   uv run -m main --max-iterations 5 --completion-promise "COMPLETE" --work-dir /workdir
 ```
