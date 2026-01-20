@@ -30,6 +30,12 @@ def parse_arguments():
         default="ALL-DONE",
         help="完成关键词（默认：ALL-DONE）"
     )
+    parser.add_argument(
+        "--work-dir",
+        type=str,
+        default=None,
+        help="iflow工作目录（默认：当前目录）"
+    )
     return parser.parse_args()
 
 
@@ -46,7 +52,7 @@ async def main():
         sys.exit(1)
     
     # 初始化iflow客户端，使用YOLO模式
-    options = IFlowOptions()
+    options = IFlowOptions(cwd=args.work_dir)
     
     max_iterations = args.max_iterations
     completion_promise = args.completion_promise
