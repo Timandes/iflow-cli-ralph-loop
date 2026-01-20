@@ -42,7 +42,13 @@ cat PROMPTS.txt | docker run --rm -i \
 cd /path/to/work
 ```
 
-2）创建PROMPTS.txt
+2）修改当前目录的权限
+
+```bash
+chmod 777 .
+```
+
+3）创建PROMPTS.txt
 
 ```bash
 echo 'xxxx' > PROMPTS.txt
@@ -54,7 +60,7 @@ echo 'xxxx' > PROMPTS.txt
 echo '结束时输出<promise>COMPLETE</promise>' >> PROMPTS.txt
 ```
 
-3）开始工作
+4）开始工作
 
 ```bash
 cat PROMPTS.txt | docker run --rm -i \
